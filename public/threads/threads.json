@@ -1,0 +1,86 @@
+[
+  {
+    "userId": "user_001",
+    "threadId": "thread_001",
+    "title": "Initial project setup discussion",
+    "active": true,
+    "createdAt": "2026-04-20T10:15:00Z"
+  },
+  {
+    "userId": "user_001",
+    "threadId": "thread_002",
+    "title": "Fix authentication bug in middleware",
+    "active": false,
+    "createdAt": "2026-04-19T08:30:00Z"
+  },
+  {
+    "userId": "user_002",
+    "threadId": "thread_003",
+    "title": "Research LLM memory optimization",
+    "active": false,
+    "createdAt": "2026-04-18T14:45:00Z"
+  },
+  {
+    "userId": "user_002",
+    "threadId": "thread_004",
+    "title": "API performance improvements",
+    "active": false,
+    "createdAt": "2026-04-17T09:10:00Z"
+  },
+  {
+    "userId": "user_003",
+    "threadId": "thread_005",
+    "title": "Design chat sidebar UI",
+    "active": false,
+    "createdAt": "2026-04-16T12:00:00Z"
+  },
+  {
+    "userId": "user_003",
+    "threadId": "thread_006",
+    "title": "Refactor backend controllers",
+    "active": false,
+    "createdAt": "2026-04-15T16:25:00Z"
+  },
+  {
+    "userId": "user_004",
+    "threadId": "thread_007",
+    "title": "Integrate Google Maps API",
+    "active": false,
+    "createdAt": "2026-04-14T11:40:00Z"
+  },
+  {
+    "userId": "user_004",
+    "threadId": "thread_008",
+    "title": "Fix GPS tracking latency issue",
+    "active": false,
+    "createdAt": "2026-04-13T07:55:00Z"
+  },
+  {
+    "userId": "user_005",
+    "threadId": "thread_009",
+    "title": "Build landing page UI system",
+    "active": false,
+    "createdAt": "2026-04-12T18:20:00Z"
+  },
+  {
+    "userId": "user_005",
+    "threadId": "thread_010",
+    "title": "Setup MongoDB indexing strategy",
+    "active": false,
+    "createdAt": "2026-04-11T21:05:00Z"
+  },
+  {
+    "userId": "mustafa",
+    "title": "New Thread",
+    "threads": "a4e9a797-13be-4265-bf79-47f63445171a",
+    "active": true,
+    "createdAt": "2026-04-24T12:00:09.931Z"
+  },
+  {
+    "userId": "ahmed",
+    "title": "New Thread",
+    "threadId": "08dd8267-9773-4568-8044-94b8901e8800",
+    "active": true,
+    "createdAt": "2026-04-24T12:06:01.784Z"
+  }
+]
