@@ -1,38 +1,46 @@
-import Chatpanel from "@/components/chat/Chatpanel";
-import ChatSidebar from "@/components/chat/ChatSidebar";
-import Logout from "@/components/Logout";
+import { getAllThreadsByUserId } from "@/tools/threadTool";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation"; // Added for safety
+import { redirect } from "next/navigation";
 
-const Page = async () => {
+/**
+ * This page handles the generic "/chat" route.
+ * It identifies the user's active thread and redirects to it directly.
+ * By doing this here, we avoid an extra redirect to "/" and then back to "/chat/[id]".
+ */
+export default async function ChatRootPage() {
   const session = await auth.api.getSession({
-    headers: await headers()
+    headers: await headers(),
   });
 
-  // Even though 'proxy.ts' handles this, a server-side 
-  // check here prevents "flash of unauthenticated content"
   if (!session) {
-    redirect("/login");
+    return redirect("/login");
   }
 
-  return (
-    <div className="flex h-screen w-full bg-background overflow-hidden">
-      {/* Sidebar - Fixed width */}
-      <aside className="w-64 border-r bg-card hidden md:flex flex-col">
-        <ChatSidebar />
-      </aside>
+  // Fetch or create the latest thread for the user
+  const result = await getAllThreadsByUserId.invoke({
+    userId: session.user.id,
+  });
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 bg-muted/20">
+  let redirectThreadId: string | null = null;
 
-        {/* Chat Panel - This should take up the remaining height */}
-        <div className="flex-1 overflow-hidden p-4 md:p-6">
-          <Chatpanel />
-        </div>
-      </main>
-    </div>
-  );
+  // Handle results from the tool
+  if (result && typeof result === "object" && "redirectThreadId" in result) {
+    redirectThreadId = (result as any).redirectThreadId;
+  } else if (typeof result === "string") {
+    try {
+      const parsed = JSON.parse(result);
+      redirectThreadId = parsed?.redirectThreadId ?? null;
+    } catch {
+      redirectThreadId = null;
+    }
+  }
+
+  // Redirect to the specific thread
+  if (redirectThreadId && redirectThreadId.trim() !== "") {
+    return redirect(`/chat/${redirectThreadId}`);
+  }
+
+  // Final fallback
+  return redirect("/chat/new-thread-session");
 }
-
-export default Page;

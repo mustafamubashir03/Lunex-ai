@@ -8,15 +8,15 @@ import { MarkdownRenderer } from "./MarkdownRenderer";
 
 interface MessageProps {
   userId?: string;
-  projectId: string;
+  projectId?: string;
   content: string;
   thinking?: string;
   role: "user" | "ai";
 }
 
-const MessageBubble = ({
+const MessageBubble = React.memo(({
   userId,
-  projectId,
+  projectId = "Lunex AI",
   content,
   thinking,
   role,
@@ -34,7 +34,7 @@ const MessageBubble = ({
 
       {/* AI ICON */}
       {isAi && (
-        <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500 text-black shadow-sm">
+        <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-accent-foreground border border-border">
           <Sparkles size={18} />
         </div>
       )}
@@ -49,18 +49,15 @@ const MessageBubble = ({
 
         {/* HEADER */}
         <div className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">
-            {isAi ? "AI Assistant" : userId || "You"}
-          </span>
 
           {isAi && (
-            <span className="text-xs opacity-60">• {projectId}</span>
+            <span className="text-xs opacity-70">• {projectId}</span>
           )}
         </div>
 
-        {/* THINKING PANEL (clean + subtle) */}
+        {/* THINKING PANEL */}
         {isAi && thinking && (
-          <div className="w-full overflow-hidden rounded-xl border border-border bg-secondary shadow-sm">
+          <div className="w-full overflow-hidden rounded-xl border border-border bg-secondary">
             <Button
               variant="ghost"
               size="sm"
@@ -78,7 +75,7 @@ const MessageBubble = ({
             </Button>
 
             {open && (
-              <div className="px-3 pb-3 pt-2 text-sm text-secondary-foreground border-t animate-in fade-in">
+              <div className="px-3 pb-3 pt-2 text-sm text-foreground border-t border-border animate-in fade-in">
                 <MarkdownRenderer content={thinking} />
               </div>
             )}
@@ -88,15 +85,15 @@ const MessageBubble = ({
         {/* MESSAGE BUBBLE */}
         <div
           className={cn(
-            "rounded-2xl px-4 py-3 text-[15.5px] leading-relaxed shadow-sm transition-all",
+            "rounded-2xl px-4 py-3 text-lg leading-relaxed transition-all",
 
-
+            // AI
             isAi &&
-              "bg-muted text-foreground border border-border rounded-tl-sm",
+            "bg-muted text-muted-foreground border border-border rounded-tl-sm",
 
-            // USER = BRAND PRIMARY (IMPORTANT FIX)
+            // USER
             !isAi &&
-              "bg-primary text-primary-foreground rounded-tr-sm shadow-md"
+            "bg-accent text-primary-foreground  rounded-tr-sm shadow-sm"
           )}
         >
           <MarkdownRenderer
@@ -105,15 +102,8 @@ const MessageBubble = ({
           />
         </div>
       </div>
-
-      {/* USER ICON */}
-      {!isAi && (
-        <div className="mt-1 flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-black shadow-sm">
-          <User size={18} />
-        </div>
-      )}
     </div>
   );
-};
+});
 
 export default MessageBubble;

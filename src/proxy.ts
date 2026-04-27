@@ -20,5 +20,5 @@ export default async function proxy(request: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/chat", "/elephant"],
+    matcher: ["/chat/:path*"],
 };

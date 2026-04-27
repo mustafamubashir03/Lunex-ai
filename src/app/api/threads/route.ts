@@ -1,5 +1,4 @@
 import { createThreadHistoryTool, updateThreadTool,readThreadTool,getAllThreadsByUserId } from "@/tools/threadTool";
-import { URL } from "next/dist/compiled/@edge-runtime/primitives";
 import { NextRequest, NextResponse } from "next/server";
 
 
@@ -21,13 +20,19 @@ export async function POST(req:NextRequest){
 export async function GET(req:NextRequest){
     try{
        const {searchParams} =new URL(req.url)
-       const userId = String(searchParams.get("userId"))
-       console.log(userId)
+       const userId = searchParams.get("userId")
        if(!userId){
          return NextResponse.json({error:"userId is required"},{status:400})
        }
-       const threads = await getAllThreadsByUserId.invoke({userId})
-       return NextResponse.json(JSON.parse(threads))
+       const result = await getAllThreadsByUserId.invoke({userId})
+       const parsed = typeof result === "string"
+  ? JSON.parse(result)
+  : result;
+
+return NextResponse.json({
+  threads: parsed?.threads ?? [],
+  redirectThreadId: parsed?.redirectThreadId ?? null,
+});
 
     }catch(error){
         console.error("Failed to get all threads via api",error)

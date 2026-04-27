@@ -1,22 +1,37 @@
-import { Button } from "@/components/ui/button";
+import { getAllThreadsByUserId } from "@/tools/threadTool";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-
-
+import { redirect } from "next/navigation";
 
 export default async function Home() {
   const session = await auth.api.getSession({
-    headers: await headers()
-})
+    headers: await headers(),
+  });
 
+  if (!session) {
+    return redirect("/login");
+  }
 
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <h1>Hello world</h1>
-      <div>
-        <h1>Welcome {session?.user.name}</h1>
-    </div>
-      <Button>Click me</Button>
-        </div>
-  );
+  const result = await getAllThreadsByUserId.invoke({
+    userId: session.user.id,
+  });
+
+  let redirectThreadId: string | null = null;
+
+  if (result && typeof result === "object" && "redirectThreadId" in result) {
+    redirectThreadId = (result as any).redirectThreadId;
+  } else if (typeof result === "string") {
+    try {
+      const parsed = JSON.parse(result);
+      redirectThreadId = parsed?.redirectThreadId ?? null;
+    } catch {
+      redirectThreadId = null;
+    }
+  }
+
+  if (redirectThreadId && redirectThreadId.trim() !== "") {
+    return redirect(`/chat/${redirectThreadId}`);
+  }
+
+  return redirect("/chat/new-thread");
 }

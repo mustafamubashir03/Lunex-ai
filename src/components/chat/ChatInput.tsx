@@ -12,11 +12,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import { authClient } from "@/lib/auth-client";
+import { useParams } from "next/navigation";
+import { useSendMessage } from "@/hooks/chat";
+
 interface ChatInputProps {
   isLoading?: boolean;
 }
 
-const ChatInput = ({ isLoading }: ChatInputProps) => {
+const ChatInput = ({ isLoading: propIsLoading }: ChatInputProps) => {
+  const { data: session } = authClient.useSession();
+  const userId = session?.user?.id || "";
+  const params = useParams();
+  const threadId = params.redirectThreadId as string;
+
+  const { mutate: sendMessage, isPending: isMutating } = useSendMessage();
+  const isLoading = propIsLoading || isMutating;
+
   const [message, setMessage] = useState("");
   const [attachments, setAttachments] = useState<File[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -34,6 +46,9 @@ const ChatInput = ({ isLoading }: ChatInputProps) => {
 
   const handleSend = () => {
     if ((!message.trim() && attachments.length === 0) || isLoading) return;
+    
+    sendMessage({ userId, threadId, content: message });
+
     setMessage("");
     setAttachments([]);
     if (textareaRef.current) textareaRef.current.style.height = "auto";

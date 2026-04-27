@@ -2,8 +2,13 @@
 
 import { useState, useRef, useEffect } from "react";
 
+import { Sparkles } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import ChatInput from "./ChatInput";
+import { useChatStore } from "@/stores/chatStore";
+import { useGetChatHistory } from "@/hooks/chat";
+import { authClient } from "@/lib/auth-client";
+import { useParams } from "next/navigation";
 
 
 interface Message {
@@ -16,117 +21,76 @@ interface Message {
 }
 
 const ChatPanel = () => {
-    const [messages] = useState<Message[]>([
-        {
-          id: "1",
-          role: "ai",
-          projectId: "next-gen-ai",
-          content: "### Environment Synced\nI've indexed your repository and am ready to assist with your **Next.js** and **FastAPI** integration. \n\nI can help you with:\n* RAG Pipeline setup\n* Multi-agent orchestration\n* Database schema optimization",
-          thinking: "Scanning directory structure... found `/app` and `/api/v1`. Configuring RAG context with `langchain-core`."
-        },
-        {
-          id: "2",
-          role: "user",
-          content: "The Turbopack build is failing with a `MODULE_UNPARSABLE` error for my proxy file. Why?",
-          projectId: "next-gen-ai",
-          userId: "dev_01"
-        },
-        {
-          id: "3",
-          role: "ai",
-          projectId: "next-gen-ai",
-          content: "This usually happens if you've transitioned to the **Next.js 16** `proxy.ts` convention. \n\n**Common Fixes:**\n1. Delete the cache: `rm -rf .next` \n2. Check for named vs default exports.\n3. Restart the dev server with `npm run dev`.",
-          thinking: "Analyzing build logs... mapping Next.js 16 proxy implementation requirements."
-        },
-        {
-          id: "4",
-          role: "user",
-          content: "I did that, but now I'm getting `adapterFn is not a function` in the terminal.",
-          projectId: "next-gen-ai",
-          userId: "dev_01"
-        },
-        {
-          id: "5",
-          role: "ai",
-          projectId: "next-gen-ai",
-          content: "Next.js 16 expects a **default export** for the proxy function. Ensure your `src/proxy.ts` looks like this"},
-        {
-          id: "6",
-          role: "user",
-          content: "Fixed. Now, about my Prisma schema—how should I handle the many-to-many relationship for the booking service?",
-          projectId: "next-gen-ai",
-          userId: "dev_01"
-        },
-        {
-          id: "7",
-          role: "ai",
-          projectId: "next-gen-ai",
-          content: "For a booking service, I recommend an explicit join table in Prisma. This allows you to store metadata like `bookingStatus` or `timestamp` directly on the relation.",
-          thinking: "Reviewing Prisma best practices for relational integrity in MERN apps."
-        },
-        {
-          id: "8",
-          role: "user",
-          content: "Can I use FastAPI as a microservice for the heavy background processing while keeping the frontend in Next.js?",
-          projectId: "next-gen-ai",
-          userId: "dev_01"
-        },
-        {
-          id: "9",
-          role: "ai",
-          projectId: "next-gen-ai",
-          content: "Absolutely. You can route long-running tasks from your Next.js API routes to FastAPI via a message queue like RabbitMQ or a direct HTTP internal proxy for faster sync operations.",
-          thinking: "Calculating latency overhead for internal service-to-service communication."
-        },
-        {
-          id: "10",
-          role: "user",
-          content: "Generate the Python pydantic model for the booking request.",
-          projectId: "next-gen-ai",
-          userId: "dev_01"
-        }
-      ]);
+  const { data: session } = authClient.useSession();
+  const userId = session?.user?.id || "";
+  const params = useParams();
+  const threadId = params.redirectThreadId as string;
+
+  const { messages, isPending } = useChatStore();
+
+
+  useGetChatHistory(userId, threadId);
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Smooth scroll behavior
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
+    const bottom = bottomRef.current;
+    if (bottom) {
+      bottom.scrollIntoView({
+        behavior: "auto",
+        block: "end",
+      });
+    }
   }, [messages]);
 
   return (
+    <div className="h-dvh bg-background flex flex-col">
+      {/* SCROLL AREA */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-5xl px-4 pt-10 pb-28 flex flex-col gap-6">
+          {messages.map((msg, idx) => (
+            <MessageBubble
+              key={idx}
+              role={msg.role}
+              content={msg.content}
+              thinking={msg.thinking}
+              userId={msg.userId}
+            />
+          ))}
 
-<div className="h-dvh bg-background flex flex-col">
+          {/* Empty State */}
+          {!isPending && messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="h-20 w-20 rounded-3xl bg-linear-to-br from-primary/20 to-chart-2/20 flex items-center justify-center mb-6 shadow-xl shadow-primary/5 border border-primary/10">
+                <Sparkles className="h-10 w-10 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold text-foreground mb-3 tracking-tight">
+                How can I help you today?
+              </h2>
+              <p className="text-muted-foreground max-w-md mx-auto text-base leading-relaxed">
+                Start a new conversation by typing a message below. I can help with coding, analysis, or just a friendly chat.
+              </p>
+            </div>
+          )}
 
-{/* SCROLL AREA */}
-<div className="flex-1 overflow-y-auto">
-  <div className="mx-auto w-full max-w-5xl px-4 pt-10 pb-28 flex flex-col gap-6">
-    
-    {messages.map((msg) => (
-      <MessageBubble
-        key={msg.id}
-        role={msg.role}
-        content={msg.content}
-        thinking={msg.thinking}
-        projectId={msg.projectId}
-        userId={msg.userId}
-      />
-    ))}
+          {isPending && messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+              <div className="h-12 w-12 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+              <p className="text-sm font-medium animate-pulse">Retrieving conversation...</p>
+            </div>
+          )}
 
-    <div ref={bottomRef} />
-  </div>
-</div>
+          <div ref={bottomRef} />
+        </div>
+      </div>
 
-{/* FLOATING INPUT */}
-<div className="relative">
-  <div className="mx-auto w-full max-w-5xl px-4">
-    <ChatInput isLoading={true} />
-  </div>
-</div>
-</div>
+      {/* FLOATING INPUT */}
+      <div className="relative">
+        <div className="mx-auto w-full max-w-5xl px-4">
+          <ChatInput />
+        </div>
+      </div>
+    </div>
   );
 };
 
