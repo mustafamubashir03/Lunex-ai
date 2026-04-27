@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Lunex AI 🚀
 
-## Getting Started
+> **Stop prompting. Start delegating.**
 
-First, run the development server:
+Lunex AI is not just another chatbot; it's an autonomous AI agent designed to take over real tasks so you can focus on what matters. Whether it's browsing the web, writing and shipping code, or conducting deep research, Lunex acts on its own—from start to finish.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+**The work gets done. You just decide what's next.**
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🌟 Holistic Overview
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Lunex AI is built on the principle of **delegation over conversation**. It leverages advanced LLMs (Cerebras, Fireworks) and autonomous orchestration (LangGraph) to bridge the gap between "asking for help" and "getting work done."
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Autonomous Browsing**: Navigates, clicks, and extracts information across any site just like a human would.
+- **End-to-End Coding**: Writes code, runs it in secure environments, and ships the final result without manual copy-pasting.
+- **Deep Research**: Aggregates data from dozens of sources to deliver one clean, actionable summary.
+- **Proactive Execution**: Once a task is assigned, Lunex manages the loop of action, observation, and refinement until the goal is achieved.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## ✨ Key Technical Features
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 1. High-Performance Real-Time Streaming
+- **Token-by-Token Delivery**: Uses a custom **Typewriter Buffer** system (`useRef` based character queues) to ensure a fluid, character-at-a-time rendering experience.
+- **Stable SSE Pipeline**: Robust Server-Sent Events (SSE) implementation with heartbeat signals (`keep-alive`) and advanced error handling.
+- **Smart Throttling**: Automatically adjusts typing speed if the backend generates tokens faster than the display can keep up, ensuring zero lag.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 2. Sophisticated Chat Interface
+- **Thinking Panel**: Dedicated UI section for displaying the AI's reasoning and tool-calling process in real-time.
+- **Markdown Excellence**: Full support for markdown rendering, including code blocks with syntax highlighting, tables, and mathematical expressions.
+- **Premium Aesthetics**: Built with a curated **OKLCH color palette**, glassmorphism effects, and smooth micro-animations.
+- **Dynamic Empty States**: Beautiful "How can I help you?" welcome screens for new threads with suggested prompts.
 
-## Deploy on Vercel
+### 3. End-to-End Thread Management
+- **MongoDB Integration**: Permanent storage for chat history and thread metadata.
+- **Seamless Navigation**: Smart routing that automatically redirects to the most recent thread while allowing instant switching via the sidebar.
+- **Sidebar Controls**: Easy access to historical threads with the ability to rename, delete, and organize conversations.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 4. Advanced Technical Stack
+- **Framework**: [Next.js 15+](https://nextjs.org/) (App Router)
+- **AI Orchestration**: [LangChain](https://js.langchain.com/) & [LangGraph](https://langchain-ai.github.io/langgraphjs/)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/) & [Lucide Icons](https://lucide.dev/)
+- **Authentication**: [Better-Auth](https://www.better-auth.com/) for secure session management.
+- **State Management**: [Zustand](https://zustand-demo.pmnd.rs/) for global UI state and [TanStack Query](https://tanstack.com/query/latest) for server state.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 🛠️ Work Accomplished So Far
+
+- [x] **Production SSE Backend**: Implemented a node-agnostic streaming pipeline in `route.ts` that handles snapshots and deltas from various LLM providers.
+- [x] **Typewriter Animation Hook**: Created a high-performance React hook (`useSendMessage`) that manages character queues and hydration-safe rendering.
+- [x] **Thread Synchronization**: Fixed complex redirect loops and ensured that thread switching is instantaneous and stable across the client and server.
+- [x] **Dark Mode Suite**: Implemented a fully-featured Light/Dark mode toggle with system preference detection and persistence using `next-themes`.
+- [x] **Empty State UI**: Designed a premium onboarding experience for new threads with visual sparks and guided suggestions.
+- [x] **Message Concurrency**: Implemented ID-based message tracking to ensure that concurrent tool calls and responses never clobber each other in the UI.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 20+
+- MongoDB Instance
+- API Keys for Cerebras and/or Fireworks AI
+
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/mustafamubashir03/Lunex-ai.git
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Set up environment variables (`.env`):
+   ```env
+   CEREBRAS_API_KEY=your_key
+   FIREWORKS_API_KEY=your_key
+   MONGODB_URI=your_mongodb_uri
+   BETTER_AUTH_SECRET=your_secret
+   ```
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## 🎨 Design System
+Lunex AI uses a modern design system based on **Tailwind CSS 4** and **OKLCH colors**. This allows for high-dynamic-range colors that look stunning in both light and dark modes.
+
+- **Primary Accent**: `oklch(0.6802 0.1902 32.0008)` (A vibrant, premium berry-pink)
+- **Backgrounds**: Carefully balanced grays that reduce eye strain and highlight code blocks.
+
+---
+
+Built with ❤️ by the Lunex Team.
