@@ -1,4 +1,4 @@
-# Lunex AI 🚀
+# Lunex AI
 
 > **Stop prompting. Start delegating.**
 
@@ -6,7 +6,7 @@ Lunex AI is not just another chatbot; it's an autonomous AI agent designed to ta
 
 **The work gets done. You just decide what's next.**
 
-## 🌟 Holistic Overview
+## Overview
 
 Lunex AI is built on the principle of **delegation over conversation**. It leverages advanced LLMs (Cerebras, Fireworks) and autonomous orchestration (LangGraph) to bridge the gap between "asking for help" and "getting work done."
 
@@ -17,7 +17,7 @@ Lunex AI is built on the principle of **delegation over conversation**. It lever
 
 ---
 
-## ✨ Key Technical Features
+## Key Technical Features
 
 ### 1. High-Performance Real-Time Streaming
 - **Token-by-Token Delivery**: Uses a custom **Typewriter Buffer** system (`useRef` based character queues) to ensure a fluid, character-at-a-time rendering experience.
@@ -44,18 +44,8 @@ Lunex AI is built on the principle of **delegation over conversation**. It lever
 
 ---
 
-## 🛠️ Work Accomplished So Far
 
-- [x] **Production SSE Backend**: Implemented a node-agnostic streaming pipeline in `route.ts` that handles snapshots and deltas from various LLM providers.
-- [x] **Typewriter Animation Hook**: Created a high-performance React hook (`useSendMessage`) that manages character queues and hydration-safe rendering.
-- [x] **Thread Synchronization**: Fixed complex redirect loops and ensured that thread switching is instantaneous and stable across the client and server.
-- [x] **Dark Mode Suite**: Implemented a fully-featured Light/Dark mode toggle with system preference detection and persistence using `next-themes`.
-- [x] **Empty State UI**: Designed a premium onboarding experience for new threads with visual sparks and guided suggestions.
-- [x] **Message Concurrency**: Implemented ID-based message tracking to ensure that concurrent tool calls and responses never clobber each other in the UI.
-
----
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Node.js 20+
@@ -85,7 +75,7 @@ Lunex AI is built on the principle of **delegation over conversation**. It lever
 
 ---
 
-## 🎨 Design System
+## Design System
 Lunex AI uses a modern design system based on **Tailwind CSS 4** and **OKLCH colors**. This allows for high-dynamic-range colors that look stunning in both light and dark modes.
 
 - **Primary Accent**: `oklch(0.6802 0.1902 32.0008)` (A vibrant, premium berry-pink)
@@ -93,4 +83,4 @@ Lunex AI uses a modern design system based on **Tailwind CSS 4** and **OKLCH col
 
 ---
 
-Built with ❤️ by the Lunex Team.
+Built with ❤️ by the Mustafa Mubashir.
