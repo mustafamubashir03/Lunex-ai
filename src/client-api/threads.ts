@@ -12,7 +12,7 @@ export const getAllThreadsByUserId = async ({
   userId: string;
 }): Promise<ThreadResponse> => {
   try {
-    const res = await fetch(`/api/threads?userId=${userId}`, {
+    const res = await fetch(`/api/mongo/threads?userId=${userId}`, {
       cache: "no-store",
     });
 
@@ -35,29 +35,29 @@ export const getAllThreadsByUserId = async ({
     };
   }
 };
-  export const createThread= async ({
-    userId,
-  }: {
-    userId: string;
-  }): Promise<Thread | object> => {
-    try {
-      const res = await fetch(`/api/threads`, {
-        method:'POST',
-        cache: "no-store",
-        headers: {
-            "Content-Type": "application/json",
-          },
-        
-          body: JSON.stringify({ userId }),
-      });
-  
-      if (!res.ok) {
-        throw new Error(`Failed to create thread (${res.status})`);
-      }
-  
-      return await res.json();
-    } catch (error) {
-      console.error("createThread:", error);
-      return {};
+export const createThread = async ({
+  userId,
+}: {
+  userId: string;
+}): Promise<Thread | object> => {
+  try {
+    const res = await fetch(`/api/mongo/threads`, {
+      method: 'POST',
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({ userId }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to create thread (${res.status})`);
     }
-  };
+
+    return await res.json();
+  } catch (error) {
+    console.error("createThread:", error);
+    return {};
+  }
+};

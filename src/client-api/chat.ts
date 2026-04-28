@@ -9,7 +9,7 @@ export const getChatHistory = async ({
   threadId: string;
 }): Promise<Message[]> => {
   try {
-    const res = await fetch(`/api/agent/chat-history?userId=${userId}&threadId=${threadId}`, {
+    const res = await fetch(`/api/mongo/agent/chat-history?userId=${userId}&threadId=${threadId}`, {
       cache: "no-store",
     });
 
@@ -34,7 +34,7 @@ export const sendMessage = async ({
   threadId: string;
   content: string;
 }): Promise<Response> => {
-  const res = await fetch(`/api/agent/streams`, {
+  const res = await fetch(`/api/mongo/agent/streams`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
