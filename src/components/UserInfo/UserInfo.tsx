@@ -14,6 +14,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
+import { LogOutIcon } from "lucide-react";
 
 const UserInfo = () => {
   const { data: session, isPending } = authClient.useSession();
@@ -96,9 +97,10 @@ const UserInfo = () => {
 
           <Button
             variant="destructive"
-            className="w-full justify-start bg-red-700/50 text-red-400"
+            className="w-full cursor-pointer justify-start bg-red-700/50 text-red-400"
             onClick={handleLogout}
           >
+            <LogOutIcon />
             Logout
           </Button>
         </div>

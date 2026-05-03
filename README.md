@@ -35,9 +35,20 @@ Lunex AI is built on the principle of **delegation over conversation**. It lever
 - **Seamless Navigation**: Smart routing that automatically redirects to the most recent thread while allowing instant switching via the sidebar.
 - **Sidebar Controls**: Easy access to historical threads with the ability to rename, delete, and organize conversations.
 
-### 4. Advanced Technical Stack
+### 4. Advanced Memory and Retrieval
+- **Hybrid Retrieval**: Combines BM25 keyword search with Pinecone vector search for high-precision context recovery.
+- **Parent-Child Indexing**: Uses a multi-vector strategy where small child chunks are used for search, but full parent documents are retrieved for context.
+- **Contextual Compression**: Dynamically filters and summarizes retrieved documents before they are fed to the LLM to reduce noise and token usage.
+
+### 5. Autonomous Memory Compression
+- **Long-Term Context**: Specialized agents compress daily logs into dense summaries, preserving key facts while discarding redundant reasoning.
+- **Optimized Storage**: Maintains a clean, searchable history that allows the agent to remember user preferences across weeks of interaction.
+
+## Technical Stack
 - **Framework**: [Next.js 15+](https://nextjs.org/) (App Router)
 - **AI Orchestration**: [LangChain](https://js.langchain.com/) & [LangGraph](https://langchain-ai.github.io/langgraphjs/)
+- **Vector Databases**: [Pinecone](https://www.pinecone.io/) for long-term memory.
+- **Embeddings**: [Cohere](https://cohere.com/) (embed-english-v3.0).
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/) & [Lucide Icons](https://lucide.dev/)
 - **Authentication**: [Better-Auth](https://www.better-auth.com/) for secure session management.
 - **State Management**: [Zustand](https://zustand-demo.pmnd.rs/) for global UI state and [TanStack Query](https://tanstack.com/query/latest) for server state.

@@ -1,4 +1,4 @@
-import { createMongoThreadTool, updateMongoThreadTool, readMongoThreadTool, getAllMongoThreadsByUserId } from "@/tools/mongoThreadTool";
+import { createMongoThreadTool, updateMongoThreadTool, readMongoThreadTool, getAllMongoThreadsByUserId, deleteMongoThreadTool } from "@/tools/mongoThreadTool";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -52,3 +52,20 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: "Failed to update thread by id via api" }, { status: 500 })
     }
 }
+
+export async function DELETE(req: NextRequest) {
+    try {
+        const body = await req.json()
+        const { threadId, userId } = body
+        if (!userId || !threadId) {
+            return NextResponse.json({ error: "userId and threadId are required" }, { status: 400 })
+        }
+        const result = await deleteMongoThreadTool.invoke({ threadId, userId })
+        return NextResponse.json({ message: result })
+
+    } catch (error) {
+        console.error("Failed to delete thread via api", error)
+        return NextResponse.json({ error: "Failed to delete thread by id via api" }, { status: 500 })
+    }
+}
+

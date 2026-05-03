@@ -61,3 +61,59 @@ export const createThread = async ({
     return {};
   }
 };
+
+export const updateThreadTitle = async ({
+  threadId,
+  userId,
+  title,
+}: {
+  threadId: string;
+  userId: string;
+  title: string;
+}): Promise<any> => {
+  try {
+    const res = await fetch(`/api/mongo/threads`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ threadId, userId, title }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to update thread title (${res.status})`);
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error("updateThreadTitle:", error);
+    throw error;
+  }
+};
+
+export const deleteThread = async ({
+  threadId,
+  userId,
+}: {
+  threadId: string;
+  userId: string;
+}): Promise<any> => {
+  try {
+    const res = await fetch(`/api/mongo/threads`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ threadId, userId }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to delete thread (${res.status})`);
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error("deleteThread:", error);
+    throw error;
+  }
+};

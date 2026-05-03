@@ -15,8 +15,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-import { useCreateThreadMutation } from "@/hooks/threads";
+import { useCreateThreadMutation, useUpdateThreadMutation, useDeleteThreadMutation } from "@/hooks/threads";
 import { authClient } from "@/lib/auth-client";
 import { useQueryClient } from "@tanstack/react-query";
 import UserInfo from "../UserInfo/UserInfo";
@@ -44,12 +53,44 @@ const ChatSidebar = ({
   const userId = session?.user?.id || "";
   const { redirectThreadId } = useParams()
   const { createThreadMutation } = useCreateThreadMutation({ userId })
+  const { updateThreadMutation } = useUpdateThreadMutation({ userId })
+  const { deleteThreadMutation } = useDeleteThreadMutation({ userId })
   const { threads, isError, isLoading, isPending } = useThreadsStore()
   const router = useRouter()
   const queryClient = useQueryClient()
+
+  const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [threadToRename, setThreadToRename] = useState<{ id: string, title: string } | null>(null);
+  const [newTitle, setNewTitle] = useState("");
+
   const onNewChat = async () => {
     await createThreadMutation()
     await queryClient.invalidateQueries({ queryKey: ["threads_by_userId", userId] })
+  }
+
+  const handleRenameClick = (threadId: string, currentTitle: string) => {
+    setThreadToRename({ id: threadId, title: currentTitle });
+    setNewTitle(currentTitle);
+    setIsRenameOpen(true);
+  }
+
+  const onRenameChat = async () => {
+    if (threadToRename && newTitle.trim() && newTitle !== threadToRename.title) {
+      await updateThreadMutation({ threadId: threadToRename.id, title: newTitle });
+      await queryClient.invalidateQueries({ queryKey: ["threads_by_userId", userId] });
+      setIsRenameOpen(false);
+      setThreadToRename(null);
+    }
+  }
+
+  const onDeleteChatLocal = async (threadId: string) => {
+    if (window.confirm("Are you sure you want to delete this thread?")) {
+      await deleteThreadMutation({ threadId });
+      await queryClient.invalidateQueries({ queryKey: ["threads_by_userId", userId] });
+      if (redirectThreadId === threadId) {
+        router.push("/chat");
+      }
+    }
   }
 
 
@@ -59,7 +100,7 @@ const ChatSidebar = ({
   };
 
   return (
-    <aside className="flex h-screen w-[260px] flex-col bg-muted border-r border-border">
+    <aside className="flex h-full w-full flex-col bg-muted border-r border-border">
 
       <div className="flex flex-col gap-4 px-4 pt-5 pb-3">
 
@@ -171,13 +212,22 @@ const ChatSidebar = ({
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent align="start">
-                  <DropdownMenuItem className="gap-2">
+                  <DropdownMenuItem 
+                    className="gap-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRenameClick(thread.threadId, thread.title);
+                    }}
+                  >
                     <Pencil className="h-3.5 w-3.5" />
                     Rename
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="gap-2 text-destructive"
-                    onClick={() => onDeleteChat?.(thread.threadId)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteChatLocal(thread.threadId);
+                    }}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     Delete
@@ -194,6 +244,38 @@ const ChatSidebar = ({
       {/* User */}
       <UserInfo />
 
+      {/* Rename Dialog */}
+      <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Rename Thread</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Title
+              </Label>
+              <Input
+                id="name"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                className="col-span-3"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onRenameChat();
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRenameOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={onRenameChat} disabled={!newTitle.trim() || newTitle === threadToRename?.title}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </aside>
   );
 };

@@ -71,7 +71,7 @@ export const POST = async (req: NextRequest) => {
 
                         // Extract content and reasoning tokens
                         const delta = message.content;
-                        const blocks = message.additional_kwargs?.contentBlocks ?? [];
+                        const blocks = (message.additional_kwargs?.contentBlocks as any[]) ?? [];
 
                         // Handle Reasoning (Thinking) Tokens
                         const reasoning = blocks.filter((b: any) => b.type === "reasoning")?.[0]?.reasoning;

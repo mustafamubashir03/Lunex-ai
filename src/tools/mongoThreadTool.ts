@@ -2,17 +2,24 @@ import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { Thread } from "@/models/threadSchema";
 import { connectDB } from "@/lib/mongodb/mongodb";
+import mongoose from "mongoose";
 
 export const createMongoThreadTool = tool(
     async ({ userId, title }: { userId: string, title: string }) => {
         try {
             await connectDB();
             
+            if (!mongoose.Types.ObjectId.isValid(userId)) {
+                return "Invalid User ID";
+            }
+            
+            const userObjectId = new mongoose.Types.ObjectId(userId);
+            
             // Deactivate all existing active threads for this user
-            await Thread.updateMany({ userId, active: true }, { $set: { active: false } });
+            await Thread.updateMany({ userId: userObjectId, active: true }, { $set: { active: false } });
             
             const newThread = await Thread.create({
-                userId,
+                userId: userObjectId,
                 title: title || "New Thread",
                 active: true,
             });
@@ -41,13 +48,20 @@ export const readMongoThreadTool = tool(async ({ threadId, userId }: { threadId:
     try {
         await connectDB();
         
+        if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(threadId)) {
+            return "[]";
+        }
+        
+        const userObjectId = new mongoose.Types.ObjectId(userId);
+        const threadObjectId = new mongoose.Types.ObjectId(threadId);
+        
         // Deactivate all threads for user
-        await Thread.updateMany({ userId }, { $set: { active: false } });
+        await Thread.updateMany({ userId: userObjectId }, { $set: { active: false } });
         
         // Activate the specific thread
-        await Thread.findOneAndUpdate({ _id: threadId, userId }, { $set: { active: true } });
+        await Thread.findOneAndUpdate({ _id: threadObjectId, userId: userObjectId }, { $set: { active: true } });
         
-        const threads = await Thread.find({ userId }).sort({ createdAt: 1 });
+        const threads = await Thread.find({ userId: userObjectId }).sort({ createdAt: 1 });
         
         const formattedThreads = threads.map(t => ({
             userId: t.userId,
@@ -76,8 +90,12 @@ export const updateMongoThreadTool = tool(async ({ threadId, userId, title }: { 
     try {
         await connectDB();
         
+        if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(threadId)) {
+            return "Invalid IDs provided";
+        }
+        
         const updated = await Thread.findOneAndUpdate(
-            { _id: threadId, userId },
+            { _id: new mongoose.Types.ObjectId(threadId), userId: new mongoose.Types.ObjectId(userId) },
             { $set: { title } }
         );
         
@@ -105,7 +123,13 @@ export const getAllMongoThreadsByUserId = tool(async ({ userId }: { userId: stri
     try {
         await connectDB();
         
-        let threads = await Thread.find({ userId }).sort({ createdAt: 1 });
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return "Failed to get all threads by userId";
+        }
+        
+        const userObjectId = new mongoose.Types.ObjectId(userId);
+        
+        let threads = await Thread.find({ userId: userObjectId }).sort({ createdAt: 1 });
         
         if (threads.length === 0) {
             const newThread = await Thread.create({
@@ -152,7 +176,14 @@ export const deleteMongoThreadTool = tool(async ({ threadId, userId }: { threadI
     try {
         await connectDB();
         
-        const deleted = await Thread.findOneAndDelete({ _id: threadId, userId });
+        if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(threadId)) {
+            return "Invalid IDs provided";
+        }
+        
+        const deleted = await Thread.findOneAndDelete({ 
+            _id: new mongoose.Types.ObjectId(threadId), 
+            userId: new mongoose.Types.ObjectId(userId) 
+        });
         if (!deleted) {
             return "Thread not found or already deleted.";
         }

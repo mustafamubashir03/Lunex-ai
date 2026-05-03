@@ -2,6 +2,7 @@ import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { ChatHistory } from "@/models/chatHistorySchema";
 import { connectDB } from "@/lib/mongodb/mongodb";
+import mongoose from "mongoose";
 
 export const messageSchema = z.object({
     userId: z.string(),
@@ -14,7 +15,23 @@ export const messageSchema = z.object({
 export const writeToMongoChatHistoryTool = tool(async ({ messages }: { messages: z.infer<typeof messageSchema>[] }) => {
     try {
         await connectDB();
-        await ChatHistory.insertMany(messages);
+        
+        // Validate and convert IDs
+        const validatedMessages = messages.filter(m => 
+            mongoose.Types.ObjectId.isValid(m.userId) && 
+            mongoose.Types.ObjectId.isValid(m.threadId)
+        ).map(m => ({
+            ...m,
+            userId: new mongoose.Types.ObjectId(m.userId),
+            threadId: new mongoose.Types.ObjectId(m.threadId)
+        }));
+
+        if (validatedMessages.length === 0) {
+            console.warn("No valid messages with correct ObjectIds to save.");
+            return "No valid messages to save.";
+        }
+
+        await ChatHistory.insertMany(validatedMessages);
         return "Messages written to chat history";
     } catch (error) {
         console.error("Error while writing to mongo chat history", error);
@@ -29,7 +46,16 @@ export const writeToMongoChatHistoryTool = tool(async ({ messages }: { messages:
 export const readMongoChatHistoryTool = tool(async ({ userId, threadId }: { userId: string, threadId: string }) => {
     try {
         await connectDB();
-        const chatHistory = await ChatHistory.find({ userId, threadId }).sort({ createdAt: 1 });
+        
+        if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(threadId)) {
+            console.warn("Invalid ObjectId provided to readMongoChatHistoryTool");
+            return "[]";
+        }
+
+        const chatHistory = await ChatHistory.find({ 
+            userId: new mongoose.Types.ObjectId(userId), 
+            threadId: new mongoose.Types.ObjectId(threadId) 
+        }).sort({ createdAt: 1 });
         
         const formattedHistory = chatHistory.map(m => ({
             userId: m.userId.toString(),

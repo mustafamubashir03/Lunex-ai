@@ -12,8 +12,13 @@
     "@base-ui/react": "^1.4.1",
     "@better-auth/mongo-adapter": "^1.6.7",
     "@langchain/cerebras": "^1.0.4",
-    "@langchain/core": "^1.1.41",
+    "@langchain/classic": "^1.0.32",
+    "@langchain/cohere": "^1.0.5",
+    "@langchain/community": "^1.1.27",
+    "@langchain/core": "^1.1.42",
     "@langchain/fireworks": "^0.1.2",
+    "@langchain/pinecone": "^1.0.2",
+    "@langchain/textsplitters": "^1.0.1",
     "@tanstack/react-query": "^5.100.1",
     "@types/mongoose": "^5.11.96",
     "better-auth": "^1.6.7",
@@ -54,5 +59,8 @@
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "zod": "^4.3.6"
   }
 }
