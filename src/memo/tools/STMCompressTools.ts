@@ -44,3 +44,19 @@ Key facts extracted:
 Conversation Summary:
 {Short narrative summary of meaningful events}
 `
+
+
+export const compressSTMTool = tool(async ({ messages }: { messages: string }) => {
+    const res = await summarizationModel.invoke([
+        new SystemMessage(SYSTEM_PROMPT),
+        new HumanMessage(messages)
+    ])
+    return res?.content
+
+}, {
+    name: "compressSTMTool",
+    description: "Compresses STM memory",
+    schema: z.object({
+        messages: z.string().describe("Raw text or concatinated messages to be compressed")
+    })
+})

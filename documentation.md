@@ -3,6 +3,57 @@
 ## Overview
 Lunex AI is an autonomous agentic system designed for task delegation rather than simple conversation. It utilizes a sophisticated stack of LLMs, vector databases, and orchestrated workflows to perform autonomous browsing, coding, and research.
 
+## System Design and Application Flow
+
+### Architecture Overview
+The application follows a modular architecture where the frontend (Next.js) communicates with an orchestrated backend (LangGraph) via a real-time streaming pipeline.
+
+```mermaid
+graph TD
+    User([User]) <--> UI[Next.js Interface]
+    UI <--> SSE[SSE Streaming Pipeline]
+    SSE <--> Auth{Better-Auth}
+    Auth <--> Agent[LangGraph Agentic Loop]
+    
+    subgraph "Orchestration & Logic"
+        Agent <--> Tools[Tool Registry]
+        Agent <--> LLM[Cerebras / Fireworks]
+    end
+    
+    subgraph "Memory & Retrieval"
+        Agent <--> HybridR[Hybrid Retriever]
+        HybridR <--> BM25[BM25 Sparse Search]
+        HybridR <--> Pinecone[Pinecone Multi-Vector Search]
+        Pinecone <--> Cohere[Cohere Embeddings]
+    end
+    
+    subgraph "Persistence"
+        Agent <--> Mongo[(MongoDB: Threads/History)]
+        Tools <--> Comp[STM Compression Agent]
+        Comp <--> Mongo
+    end
+```
+
+### Detailed Application Flow
+
+1. **Request Initiation**: The user sends a prompt via the Next.js interface. The request is passed through the SSE pipeline to maintain a persistent connection for streaming.
+2. **Authentication and Session Management**: Better-Auth validates the user's session. The request is rejected if the JWT is invalid or expired.
+3. **Context Retrieval (Hybrid Approach)**:
+    - **BM25 Search**: The system performs a keyword-based search to find exact matches in the local "Daily Log Archive".
+    - **Vector Search**: Simultaneously, the query is embedded via Cohere and searched against Pinecone child chunks.
+    - **Context Expansion**: Any child chunk matches are mapped to their parent documents (2000 tokens) to ensure the LLM has complete context.
+4. **Agentic Loop (LangGraph)**:
+    - The retrieved context and user prompt are fed into the LangGraph state machine.
+    - The LLM (Cerebras) decides whether to invoke tools (e.g., memory compression, history updates) or respond directly.
+    - If reasoning is required, "thinking" tokens are generated and streamed to the UI's thinking panel.
+5. **Streaming and Response Generation**:
+    - Final tokens are streamed through the SSE pipeline.
+    - On the client side, the Typewriter Buffer ensures smooth rendering.
+    - Heartbeat signals prevent the connection from timing out during long reasoning tasks.
+6. **Background Persistence and Maintenance**:
+    - The conversation is saved to MongoDB (threads and messages collections).
+    - Periodic triggers invoke the STM Compression Agent to summarize the day's events, which are then indexed into the long-term memory store.
+
 ## Core Architecture
 
 ### Framework and Orchestration

@@ -94,4 +94,4 @@ Lunex AI uses a modern design system based on **Tailwind CSS 4** and **OKLCH col
 
 ---
 
-Built with ❤️ by the Mustafa Mubashir.
+Built with ❤️ by Mustafa Mubashir.
