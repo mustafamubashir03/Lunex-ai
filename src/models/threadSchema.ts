@@ -14,6 +14,10 @@ const threadSchema = new mongoose.Schema({
     active: {
         type: Boolean,
         default: true
+    },
+    lastCompressedAt: {
+        type: Date,
+        default: null
     }
 
 }, { timestamps: true, strict: false })

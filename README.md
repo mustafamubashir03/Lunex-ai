@@ -30,25 +30,27 @@ Lunex AI is built on the principle of **delegation over conversation**. It lever
 - **Premium Aesthetics**: Built with a curated **OKLCH color palette**, glassmorphism effects, and smooth micro-animations.
 - **Dynamic Empty States**: Beautiful "How can I help you?" welcome screens for new threads with suggested prompts.
 
-### 3. End-to-End Thread Management
-- **MongoDB Integration**: Permanent storage for chat history and thread metadata.
-- **Seamless Navigation**: Smart routing that automatically redirects to the most recent thread while allowing instant switching via the sidebar.
-- **Sidebar Controls**: Easy access to historical threads with the ability to rename, delete, and organize conversations.
+### 3. Production-Grade Storage
+- **MongoDB Persistence**: Full transition from file-based storage to MongoDB (Mongoose) for all threads and chat history.
+- **Thread Lifecycle**: Complete CRUD support (Create, Read, Update, Delete) for chat threads with instant UI synchronization.
+- **Seamless Migration**: Built-in logic to handle user sessions and multi-thread switching via a dynamic Sidebar.
 
-### 4. Advanced Memory and Retrieval
-- **Hybrid Retrieval**: Combines BM25 keyword search with Pinecone vector search for high-precision context recovery.
-- **Parent-Child Indexing**: Uses a multi-vector strategy where small child chunks are used for search, but full parent documents are retrieved for context.
-- **Contextual Compression**: Dynamically filters and summarizes retrieved documents before they are fed to the LLM to reduce noise and token usage.
+### 4. Integrated Agentic Memory
+- **LTM Retrieval**: Fully operational 4-stage memory pipeline using **Pinecone** and **Cohere**.
+- **Multi-Vector Strategy**: Uses a sophisticated "Parent-Child" indexing pattern where the agent searches small chunks but reads full context.
+- **Contextual Compression**: Leverages **Llama 3.1** via Cerebras to distill retrieved memories into actionable insights before generation.
+- **Rate-Limit Resilience**: Optimized for Trial API keys with global concurrency management, batching, and exponential backoff retries.
 
-### 5. Autonomous Memory Compression
-- **Long-Term Context**: Specialized agents compress daily logs into dense summaries, preserving key facts while discarding redundant reasoning.
-- **Optimized Storage**: Maintains a clean, searchable history that allows the agent to remember user preferences across weeks of interaction.
+### 5. Autonomous Memory Management
+- **Memory Agent**: A dedicated agentic turn that decides when to store new facts and when to search the long-term vault.
+- **Persistent Persona**: The agent recognizes user identity (e.g., your name, tech stack, and projects) across different sessions and threads.
 
 ## Technical Stack
 - **Framework**: [Next.js 15+](https://nextjs.org/) (App Router)
 - **AI Orchestration**: [LangChain](https://js.langchain.com/) & [LangGraph](https://langchain-ai.github.io/langgraphjs/)
-- **Vector Databases**: [Pinecone](https://www.pinecone.io/) for long-term memory.
-- **Embeddings**: [Cohere](https://cohere.com/) (embed-english-v3.0).
+- **Database**: **MongoDB** (Mongoose) for permanent thread and history storage.
+- **Vector Stores**: [Pinecone](https://www.pinecone.io/) for long-term semantic memory.
+- **Embeddings**: [Cohere](https://cohere.com/) (embed-english-v3.0) with custom rate-limiting middleware.
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/) & [Lucide Icons](https://lucide.dev/)
 - **Authentication**: [Better-Auth](https://www.better-auth.com/) for secure session management.
 - **State Management**: [Zustand](https://zustand-demo.pmnd.rs/) for global UI state and [TanStack Query](https://tanstack.com/query/latest) for server state.

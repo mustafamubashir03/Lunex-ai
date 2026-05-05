@@ -1,16 +1,17 @@
-import { cerebrasModel, fireworksModel } from "@/llms/LLM";
+import { cerebrasModel } from "@/llms/LLM";
 import { writeToMongoChatHistoryTool } from "@/tools/mongoChatHistoryTool";
-import { createAgent } from "langchain";
+import { createMemoryAgent } from "@/lib/agent/memoryAgent";
+import { MemoryService } from "@/services/memoryService";
 import { NextRequest } from "next/server";
 
 export const POST = async (req: NextRequest) => {
     try {
         const { userId, threadId, content } = await req.json();
 
-        const agent = createAgent({
+
+        const agent = createMemoryAgent({
             model: cerebrasModel,
-            systemPrompt: `You are a helpful assistant that chats professionally.
-      Always remember past conversation context.`,
+            tools: [], // Add other tools here as needed
         });
 
         const encoder = new TextEncoder();
@@ -21,7 +22,7 @@ export const POST = async (req: NextRequest) => {
             );
         };
 
-        // ✅ Save user message first using Mongo Tool
+
         await writeToMongoChatHistoryTool.invoke({
             messages: [{ userId, threadId, content, role: "user" }],
         });
@@ -32,10 +33,9 @@ export const POST = async (req: NextRequest) => {
 
         const stream = new ReadableStream({
             async start(controller) {
-                // ✅ Add Abort Handling
                 const abort = req.signal;
 
-                // ✅ Add Heartbeat (Safe universal keep-alive)
+                // Heartbeat to keep connection alive
                 const heartbeat = setInterval(() => {
                     if (!isClosed) {
                         controller.enqueue(encoder.encode(":\n\n"));
@@ -49,61 +49,68 @@ export const POST = async (req: NextRequest) => {
                 });
 
                 try {
-                    // ✅ Send Initial Chunk
                     controller.enqueue(sse("start", { ok: true }));
                     await Promise.resolve();
 
-                    // ✅ Use "messages" mode for true token-by-token streaming
                     const agentStream = await agent.stream(
                         {
                             messages: [{ role: "user", content }],
+                            userId, // Pass userId to populate the state
                         },
                         {
+                            configurable: { thread_id: threadId },
                             streamMode: "messages",
                         }
                     );
 
-                    for await (const [message, metadata] of agentStream) {
+                    for await (const chunk of agentStream) {
                         if (isClosed) break;
 
-                        // Identify the node
-                        const node = metadata?.langgraph_node;
+                        // In "messages" stream mode, each chunk is a [message, metadata] tuple
+                        const [message, metadata] = Array.isArray(chunk) ? chunk : [chunk, (chunk as any).metadata];
+                        
+                        // Handle tool status indications
+                        if (metadata?.langgraph_node === "tools") {
+                            const toolName = (message as any).name;
+                            if (toolName === "write_memory") {
+                                controller.enqueue(sse("status", { message: "Saving to long-term memory..." }));
+                            } else if (toolName === "search_long_term_memory") {
+                                controller.enqueue(sse("status", { message: "Searching past memories..." }));
+                            }
+                            continue;
+                        }
 
-                        // Extract content and reasoning tokens
-                        const delta = message.content;
+                        if (!message || metadata?.langgraph_node !== "model_request") continue;
+
+                        const delta = typeof message.content === "string" ? message.content : "";
                         const blocks = (message.additional_kwargs?.contentBlocks as any[]) ?? [];
 
-                        // Handle Reasoning (Thinking) Tokens
                         const reasoning = blocks.filter((b: any) => b.type === "reasoning")?.[0]?.reasoning;
                         if (reasoning) {
                             thinkingBuffer += reasoning;
                             controller.enqueue(sse("thinking", { thinking: reasoning }));
-                            await Promise.resolve();
                         }
 
-                        // Handle Content Tokens
                         if (delta) {
                             streamingText += delta;
                             controller.enqueue(sse("message", { content: delta }));
-                            await Promise.resolve();
                         }
                     }
 
-                    // ✅ Send "end" ONLY once
                     if (!isClosed) {
                         controller.enqueue(sse("end", { ok: true }));
                     }
 
                     clearInterval(heartbeat);
 
-                    // ✅ SAVE AI RESPONSE using Mongo Tool
-                    if (!isClosed) {
+                    // 1. STM Stage: Save AI response (Blocking)
+                    if (!isClosed && (streamingText.trim() || thinkingBuffer.trim())) {
                         await writeToMongoChatHistoryTool.invoke({
                             messages: [
                                 {
                                     role: "ai",
                                     thinking: thinkingBuffer.trim(),
-                                    content: streamingText,
+                                    content: streamingText.trim() || "...", // Fallback for required field
                                     threadId,
                                     userId,
                                 },
@@ -115,16 +122,13 @@ export const POST = async (req: NextRequest) => {
                 } catch (error: any) {
                     clearInterval(heartbeat);
                     if (!isClosed) {
-                        controller.enqueue(
-                            sse("error", { message: error.message })
-                        );
+                        controller.enqueue(sse("error", { message: error.message }));
                         controller.close();
                     }
                 }
             },
         });
 
-        // ✅ Fix SSE Response Headers
         return new Response(stream, {
             headers: {
                 "Content-Type": "text/event-stream",

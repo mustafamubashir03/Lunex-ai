@@ -33,22 +33,34 @@ async function createParentDocs({ rawDocs, userId }: { rawDocs: Document[], user
 async function createChildDocs({ parentDocs, userId }: { parentDocs: Document[], userId: string }) {
     const childSplitter = new RecursiveCharacterTextSplitter({ chunkSize: 400, chunkOverlap: 100 })
     const childSplits = await childSplitter.splitDocuments(parentDocs)
-    return childSplits.map((split, i) => {
-        const parentIndex = Math.floor(i / 4)
-        const parentMetadata = parentDocs[parentIndex]?.metadata
-        split.metadata.docType = "child"
-        split.metadata.chunkId = `child-${parentMetadata?.chunkId}-${i}`
-        split.metadata.parentId = parentMetadata?.chunkId
-        split.metadata.source = parentMetadata.metadata.source as string
-        split.metadata.userId = userId
-        return split
 
-    })
+    return childSplits.map((split) => {
+        // Child splits from splitDocuments already carry their parent's metadata in most cases,
+        // but we ensure consistency here.
+        const parentId = split.metadata.parentId;
+        const source = split.metadata.source;
+
+        split.metadata.docType = "child";
+        split.metadata.chunkId = `child-${parentId}-${uuidv4()}`;
+        split.metadata.userId = userId;
+        // Ensure parentId and source are explicitly set if they were lost during splitting
+        split.metadata.parentId = parentId;
+        split.metadata.source = source;
+
+        return split;
+    });
 }
 
 
+// Shared embedding instance with strict rate limiting for Trial keys
+const sharedEmbeddings = new CohereEmbeddings({
+    apiKey: process.env.COHERE_API_KEY,
+    model: "embed-english-v3.0",
+    maxRetries: 10, // Increased retries for heavy parallel tasks
+    batchSize: 32   // Even smaller batches for stability
+})
+
 export async function docEmbeddingMultiVector({ allDocs, userId }: { allDocs: Document[], userId: string }) {
-    const embeddings = new CohereEmbeddings({ apiKey: process.env.COHERE_API_KEY, model: "embed-english-v3.0" })
     const pinecone = new PineconeClient({ apiKey: process.env.PINECONE_API_KEY || "" })
     const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX || "")
     console.log("loading documents")
@@ -57,23 +69,24 @@ export async function docEmbeddingMultiVector({ allDocs, userId }: { allDocs: Do
     const parentDocs = await createParentDocs({ rawDocs, userId })
     console.log("creating child docs")
     const childDocs = await createChildDocs({ parentDocs, userId })
-    const vectorStore = new PineconeStore(embeddings, {
+    const vectorStore = new PineconeStore(sharedEmbeddings, {
         pineconeIndex,
-        maxConcurrency: 5
+        maxConcurrency: 1 // Force sequential processing for storage
     })
-    await vectorStore.addDocuments(childDocs)
-    console.log("single index", parentDocs.length, "parent chunk size")
-    console.log("total documents", parentDocs.length + childDocs.length)
+
+    console.log(`Saving ${parentDocs.length} parents and ${childDocs.length} children...`)
+    await vectorStore.addDocuments([...parentDocs, ...childDocs])
+
+    console.log("Memory storage complete.")
 }
 
-export async function queryMulitVector({ userId, query }: { userId: string, query: string }) {
+export async function queryMultiVector({ userId, query }: { userId: string, query: string }) {
     const kParents = 3
-    const embeddings = new CohereEmbeddings({ apiKey: process.env.COHERE_API_KEY, model: "embed-english-v3.0" })
     const pinecone = new PineconeClient({ apiKey: process.env.PINECONE_API_KEY || "" })
     const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX || "")
-    const vectorStore = new PineconeStore(embeddings, {
+    const vectorStore = new PineconeStore(sharedEmbeddings, {
         pineconeIndex,
-        maxConcurrency: 5
+        maxConcurrency: 2
     })
     const childDocs = await vectorStore.similaritySearch(query, 6, { docType: "child", userId: userId })
     const parentChunkIds = [...new Set(childDocs.map((doc) => doc?.metadata?.parentId))] as string[]

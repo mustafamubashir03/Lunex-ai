@@ -5,7 +5,7 @@ import { useChatStore } from "@/stores/chatStore";
 
 export const useGetChatHistory = (userId: string, threadId: string) => {
   const { setMessages, setIsPending, clearChat } = useChatStore();
-  
+
   return useQuery({
     queryKey: ["chat_history", userId, threadId],
     queryFn: async () => {
@@ -21,13 +21,13 @@ export const useGetChatHistory = (userId: string, threadId: string) => {
 };
 
 export const useSendMessage = () => {
-  const { 
-    addMessage, 
-    updateMessageById, 
-    setIsStreaming 
+  const {
+    addMessage,
+    updateMessageById,
+    setIsStreaming
   } = useChatStore();
 
-  // ✅ Typewriter Refs
+
   const contentQueueRef = useRef<string[]>([]);
   const thinkingQueueRef = useRef<string[]>([]);
   const currentContentRef = useRef("");
@@ -45,7 +45,7 @@ export const useSendMessage = () => {
         const nextChar = thinkingQueueRef.current.shift();
         currentThinkingRef.current += nextChar;
         updated = true;
-      } 
+      }
       // 💬 Process Content Queue
       else if (contentQueueRef.current.length > 0) {
         const nextChar = contentQueueRef.current.shift();
@@ -54,11 +54,11 @@ export const useSendMessage = () => {
       }
 
       if (updated) {
-        updateMessageById(messageId, { 
+        updateMessageById(messageId, {
           content: currentContentRef.current,
           thinking: currentThinkingRef.current
         });
-        
+
         // Speed up if queue is backed up
         const queueSize = contentQueueRef.current.length + thinkingQueueRef.current.length;
         const delay = queueSize > 100 ? 1 : queueSize > 20 ? 5 : 15;
@@ -83,10 +83,10 @@ export const useSendMessage = () => {
       typingTimerRef.current = null;
 
       addMessage({ role: "user", content, userId, threadId });
-      
+
       const aiMessageId = crypto.randomUUID();
       addMessage({ id: aiMessageId, role: "ai", content: "", thinking: "", userId, threadId });
-      
+
       setIsStreaming(true);
 
       const response = await sendMessage({ userId, threadId, content });
@@ -102,13 +102,13 @@ export const useSendMessage = () => {
           if (done) break;
 
           lineBuffer += decoder.decode(value, { stream: true });
-          
+
           const events = lineBuffer.split("\n\n");
           lineBuffer = events.pop() || "";
 
           for (const part of events) {
             if (!part.trim()) continue;
-            
+
             const lines = part.split("\n");
             let event = "";
             let data: any = null;
@@ -121,7 +121,7 @@ export const useSendMessage = () => {
                 const dataStr = trimmed.replace("data:", "").trim();
                 try {
                   data = JSON.parse(dataStr);
-                } catch (e) {}
+                } catch (e) { }
               }
             }
 
