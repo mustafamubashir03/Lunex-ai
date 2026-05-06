@@ -1,7 +1,6 @@
 import { cerebrasModel } from "@/llms/LLM";
 import { writeToMongoChatHistoryTool } from "@/tools/mongoChatHistoryTool";
 import { createMemoryAgent } from "@/lib/agent/memoryAgent";
-import { MemoryService } from "@/services/memoryService";
 import { NextRequest } from "next/server";
 
 export const POST = async (req: NextRequest) => {
@@ -10,8 +9,7 @@ export const POST = async (req: NextRequest) => {
 
 
         const agent = createMemoryAgent({
-            model: cerebrasModel,
-            tools: [], // Add other tools here as needed
+            model: cerebrasModel
         });
 
         const encoder = new TextEncoder();
@@ -56,7 +54,7 @@ export const POST = async (req: NextRequest) => {
                         {
                             messages: [{ role: "user", content }],
                             userId, // Pass userId to populate the state
-                        },
+                        } as any,
                         {
                             configurable: { thread_id: threadId },
                             streamMode: "messages",
@@ -68,8 +66,7 @@ export const POST = async (req: NextRequest) => {
 
                         // In "messages" stream mode, each chunk is a [message, metadata] tuple
                         const [message, metadata] = Array.isArray(chunk) ? chunk : [chunk, (chunk as any).metadata];
-                        
-                        // Handle tool status indications
+
                         if (metadata?.langgraph_node === "tools") {
                             const toolName = (message as any).name;
                             if (toolName === "write_memory") {
@@ -103,14 +100,13 @@ export const POST = async (req: NextRequest) => {
 
                     clearInterval(heartbeat);
 
-                    // 1. STM Stage: Save AI response (Blocking)
                     if (!isClosed && (streamingText.trim() || thinkingBuffer.trim())) {
                         await writeToMongoChatHistoryTool.invoke({
                             messages: [
                                 {
                                     role: "ai",
                                     thinking: thinkingBuffer.trim(),
-                                    content: streamingText.trim() || "...", // Fallback for required field
+                                    content: streamingText.trim() || "...",
                                     threadId,
                                     userId,
                                 },

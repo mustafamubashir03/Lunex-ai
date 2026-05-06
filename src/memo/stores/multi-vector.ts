@@ -35,15 +35,13 @@ async function createChildDocs({ parentDocs, userId }: { parentDocs: Document[],
     const childSplits = await childSplitter.splitDocuments(parentDocs)
 
     return childSplits.map((split) => {
-        // Child splits from splitDocuments already carry their parent's metadata in most cases,
-        // but we ensure consistency here.
+
         const parentId = split.metadata.parentId;
         const source = split.metadata.source;
 
         split.metadata.docType = "child";
         split.metadata.chunkId = `child-${parentId}-${uuidv4()}`;
         split.metadata.userId = userId;
-        // Ensure parentId and source are explicitly set if they were lost during splitting
         split.metadata.parentId = parentId;
         split.metadata.source = source;
 
@@ -51,13 +49,11 @@ async function createChildDocs({ parentDocs, userId }: { parentDocs: Document[],
     });
 }
 
-
-// Shared embedding instance with strict rate limiting for Trial keys
 const sharedEmbeddings = new CohereEmbeddings({
     apiKey: process.env.COHERE_API_KEY,
     model: "embed-english-v3.0",
-    maxRetries: 10, // Increased retries for heavy parallel tasks
-    batchSize: 32   // Even smaller batches for stability
+    maxRetries: 10,
+    batchSize: 32
 })
 
 export async function docEmbeddingMultiVector({ allDocs, userId }: { allDocs: Document[], userId: string }) {
@@ -71,7 +67,7 @@ export async function docEmbeddingMultiVector({ allDocs, userId }: { allDocs: Do
     const childDocs = await createChildDocs({ parentDocs, userId })
     const vectorStore = new PineconeStore(sharedEmbeddings, {
         pineconeIndex,
-        maxConcurrency: 1 // Force sequential processing for storage
+        maxConcurrency: 2
     })
 
     console.log(`Saving ${parentDocs.length} parents and ${childDocs.length} children...`)

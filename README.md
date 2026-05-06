@@ -17,6 +17,14 @@ Lunex AI is built on the principle of **delegation over conversation**. It lever
 
 ---
 
+## Why Lunex AI?
+
+Traditional chatbots wait for you to tell them every step. **Lunex AI thinks three steps ahead.** 
+
+By combining **Cerebras' ultra-low-latency inference** with **LangGraph's stateful orchestration**, Lunex doesn't just talk about work—it performs it. The system is backed by a professional-grade infrastructure that ensures your data is persistent, your agent remembers your preferences, and your experience is fluid.
+
+---
+
 ## Key Technical Features
 
 ### 1. High-Performance Real-Time Streaming
@@ -35,11 +43,11 @@ Lunex AI is built on the principle of **delegation over conversation**. It lever
 - **Thread Lifecycle**: Complete CRUD support (Create, Read, Update, Delete) for chat threads with instant UI synchronization.
 - **Seamless Migration**: Built-in logic to handle user sessions and multi-thread switching via a dynamic Sidebar.
 
-### 4. Integrated Agentic Memory
-- **LTM Retrieval**: Fully operational 4-stage memory pipeline using **Pinecone** and **Cohere**.
-- **Multi-Vector Strategy**: Uses a sophisticated "Parent-Child" indexing pattern where the agent searches small chunks but reads full context.
-- **Contextual Compression**: Leverages **Llama 3.1** via Cerebras to distill retrieved memories into actionable insights before generation.
-- **Rate-Limit Resilience**: Optimized for Trial API keys with global concurrency management, batching, and exponential backoff retries.
+### 4. Hybrid Multi-Vector Memory
+- **Semantic & Keyword Search**: Integrates **Pinecone** for deep semantic understanding and **BM25** for high-precision keyword matching.
+- **Contextual Compression**: Automatically distills hundreds of lines of historical context into a few relevant sentences before the AI processes it.
+- **Persistent Persona**: The agent recognizes user identity, project tech stacks, and previous preferences across any new thread.
+- **Trial-Key Optimized**: Built-in global rate-limiting and 10x retry logic to ensure 100% reliability on free-tier embedding APIs.
 
 ### 5. Autonomous Memory Management
 - **Memory Agent**: A dedicated agentic turn that decides when to store new facts and when to search the long-term vault.
