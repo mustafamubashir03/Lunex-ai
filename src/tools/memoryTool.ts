@@ -1,104 +1,46 @@
-import { tool, ToolMessage, type ToolRuntime } from "langchain";
-import { Command } from "@langchain/langgraph";
+import { tool, ToolRuntime } from "@langchain/core/tools";
 import * as z from "zod";
 import { AgentState } from "@/lib/agent/state";
+import { docEmbeddingMultiVector, queryMultiVector } from "@/memo/stores/multi-vector";
+import { Document } from "@langchain/core/documents";
+import { connectDB } from "@/lib/mongodb/mongodb";
 import { ChatHistory } from "@/models/chatHistorySchema";
 import mongoose from "mongoose";
-import { connectDB } from "@/lib/mongodb/mongodb";
-import { queryMultiVector, docEmbeddingMultiVector } from "@/memo/stores/multi-vector";
-import { Document } from "@langchain/core/documents";
 
-export const getUserInfo = tool(
-    async (_, config: ToolRuntime<typeof AgentState.State>) => {
-        const userName = config.state.userName;
-        return userName ? `User is known as ${userName}` : "User is currently unknown.";
-    },
-    {
-        name: "get_user_info",
-        description: "Retrieve the current user's name and information from persistent memory.",
-        schema: z.object({}),
-    }
-);
-
-export const updateUserInfo = tool(
-    async ({ name }, config: ToolRuntime<typeof AgentState.State>) => {
-        return new Command({
-            update: {
-                userName: name,
-                messages: [
-                    new ToolMessage({
-                        content: `User name updated to: ${name}`,
-                        tool_call_id: config.toolCall?.id ?? "",
-                    }),
-                ],
-            },
-        });
-    },
-    {
-        name: "update_user_info",
-        description: "Update the user's name or identity in persistent memory.",
-        schema: z.object({
-            name: z.string().describe("The name to save for the user"),
-        }),
-    }
-);
-
-export const greet = tool(
-    async (_, config: ToolRuntime<typeof AgentState.State>) => {
-        const userName = config.state.userName || "friend";
-        return `Hello ${userName}!`;
-    },
-    {
-        name: "greet",
-        description: "Greet the user personally using their name from memory.",
-        schema: z.object({}),
-    }
-);
-
-export const writeMemory = tool(
+export const writeLTM = tool(
     async ({ info }, config: ToolRuntime<typeof AgentState.State>) => {
         const userId = config.state.userId || "anonymous";
-        const currentMemories = config.state.memories || [];
-        
+
         try {
-            // 1. Write to LTM (Existing pipeline)
+            console.log(`[LTM WRITE] User: ${userId} | Info: ${info}`);
+
             await docEmbeddingMultiVector({
                 allDocs: [new Document({ pageContent: info, metadata: { source: "agent_write", type: "fact" } })],
                 userId
             });
 
-            return new Command({
-                update: {
-                    memories: [...currentMemories, info],
-                    messages: [
-                        new ToolMessage({
-                            content: `Memory saved and indexed in LTM: ${info}`,
-                            tool_call_id: config.toolCall?.id ?? "",
-                        }),
-                    ],
-                },
-            });
+            console.log(`[LTM WRITE SUCCESS] Saved to Pinecone for ${userId}`);
+
+            return `Memory saved and indexed in LTM: ${info}`;
         } catch (error) {
             console.error("LTM Write Error:", error);
             return "Failed to save to long-term memory.";
         }
     },
     {
-        name: "write_memory",
-        description: "Save important information about the user or conversation to persistent memory.",
+        name: "writeLTM",
+        description: "Save structured, concise summaries into long-term memory.",
         schema: z.object({
             info: z.string().describe("The information to remember"),
         }),
     }
 );
 
-export const searchLongTermMemory = tool(
+export const searchLTM = tool(
     async ({ query }, config: ToolRuntime<typeof AgentState.State>) => {
         const userId = config.state.userId || "anonymous";
         try {
-            // Use existing multi-vector retrieval logic
             const { retrievedDocs } = await queryMultiVector({ userId, query });
-            
             const memoryText = retrievedDocs.map(d => d.pageContent).join("\n---\n");
             return memoryText || "No relevant long-term memories found.";
         } catch (error) {
@@ -107,7 +49,7 @@ export const searchLongTermMemory = tool(
         }
     },
     {
-        name: "search_long_term_memory",
+        name: "searchLTM",
         description: "Search for relevant information and summaries from past conversations using semantic search.",
         schema: z.object({
             query: z.string().describe("The semantic query to search for in past memories"),
@@ -115,18 +57,18 @@ export const searchLongTermMemory = tool(
     }
 );
 
-export const readThreadHistory = tool(
-    async ({ threadId }, config: ToolRuntime<typeof AgentState.State>) => {
+export const readHistory = tool(
+    async ({ threadId }) => {
         try {
             await connectDB();
             if (!mongoose.Types.ObjectId.isValid(threadId)) {
                 return "Invalid thread ID.";
             }
 
-            const messages = await ChatHistory.find({ 
-                threadId: new mongoose.Types.ObjectId(threadId) 
+            const messages = await ChatHistory.find({
+                threadId: new mongoose.Types.ObjectId(threadId)
             }).sort({ createdAt: 1 }).limit(50);
-            
+
             const historyText = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join("\n");
             return historyText || "No history found for this thread.";
         } catch (error) {
@@ -135,10 +77,10 @@ export const readThreadHistory = tool(
         }
     },
     {
-        name: "read_thread_history",
-        description: "Read the raw chat history for a specific thread from the database.",
+        name: "readHistory",
+        description: "Read the conversation history of a specific thread from MongoDB.",
         schema: z.object({
-            threadId: z.string().describe("The MongoDB ObjectId of the thread to read"),
+            threadId: z.string().describe("The ID of the thread to read"),
         }),
     }
 );

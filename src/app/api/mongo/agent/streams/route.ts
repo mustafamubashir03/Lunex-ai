@@ -2,6 +2,7 @@ import { cerebrasModel } from "@/llms/LLM";
 import { writeToMongoChatHistoryTool } from "@/tools/mongoChatHistoryTool";
 import { createMemoryAgent } from "@/lib/agent/memoryAgent";
 import { NextRequest } from "next/server";
+import { generateMongoThreadTitleTool } from "@/tools/mongoThreadTool";
 
 export const POST = async (req: NextRequest) => {
     try {
@@ -28,6 +29,7 @@ export const POST = async (req: NextRequest) => {
         let streamingText = "";
         let thinkingBuffer = "";
         let isClosed = false;
+        let isInsideJSON = false;
 
         const stream = new ReadableStream({
             async start(controller) {
@@ -64,6 +66,9 @@ export const POST = async (req: NextRequest) => {
                     for await (const chunk of agentStream) {
                         if (isClosed) break;
 
+                        // 🔍 DIAGNOSTIC: Log raw chunk to see tool call structure
+                        console.log("DEBUG CHUNK:", JSON.stringify(chunk, null, 2));
+
                         // In "messages" stream mode, each chunk is a [message, metadata] tuple
                         const [message, metadata] = Array.isArray(chunk) ? chunk : [chunk, (chunk as any).metadata];
 
@@ -79,7 +84,36 @@ export const POST = async (req: NextRequest) => {
 
                         if (!message || metadata?.langgraph_node !== "model_request") continue;
 
-                        const delta = typeof message.content === "string" ? message.content : "";
+                        // 🛑 CRITICAL: Skip chunks that are tool calls to prevent JSON leak in UI
+                        if ((message as any).tool_calls && (message as any).tool_calls.length > 0) continue;
+
+                        let delta = typeof message.content === "string" ? message.content : "";
+
+                        // 🛑 STATEFUL FILTER: Catch and hide raw JSON tool calls or tag-style calls leaking into content
+                        const isJsonStart = delta.includes('{"name":') || delta.includes('"arguments":') || delta.includes('"action":') || delta.includes('{"tool"');
+                        const isTagStart = delta.includes('<writeLTM') || delta.includes('<searchLTM') || delta.includes('<readHistory');
+
+                        if (!isInsideJSON && (isJsonStart || isTagStart)) {
+                            console.log("⚠️ ENTERED TECHNICAL BLOCK IN STREAM:", delta);
+                            isInsideJSON = true;
+                            const startIndex = delta.includes('<') ? delta.indexOf('<') : delta.indexOf('{');
+                            delta = delta.substring(0, startIndex);
+                        }
+
+                        if (isInsideJSON) {
+                            if (delta.includes('}') || delta.includes('>')) {
+                                console.log("⚠️ EXITING TECHNICAL BLOCK IN STREAM:", delta);
+                                isInsideJSON = false;
+                                const lastIndex = delta.includes('>') ? delta.lastIndexOf('>') : delta.lastIndexOf('}');
+                                delta = delta.substring(lastIndex + 1);
+                            } else {
+                                delta = ""; // Swallow chunk while inside block
+                            }
+                        }
+
+                        if (!delta && !isInsideJSON) continue;
+                        if (!delta) continue;
+
                         const blocks = (message.additional_kwargs?.contentBlocks as any[]) ?? [];
 
                         const reasoning = blocks.filter((b: any) => b.type === "reasoning")?.[0]?.reasoning;
@@ -93,13 +127,6 @@ export const POST = async (req: NextRequest) => {
                             controller.enqueue(sse("message", { content: delta }));
                         }
                     }
-
-                    if (!isClosed) {
-                        controller.enqueue(sse("end", { ok: true }));
-                    }
-
-                    clearInterval(heartbeat);
-
                     if (!isClosed && (streamingText.trim() || thinkingBuffer.trim())) {
                         await writeToMongoChatHistoryTool.invoke({
                             messages: [
@@ -112,7 +139,23 @@ export const POST = async (req: NextRequest) => {
                                 },
                             ],
                         });
+
+                        // Only attempt title generation after saving the AI response
+                        const updateThreadResult = await generateMongoThreadTitleTool.invoke({
+                            threadId,
+                            userId
+                        });
+
+                        if (typeof updateThreadResult === "string" && updateThreadResult.startsWith("Title generated:")) {
+                            controller.enqueue(sse("updateThread", { ok: true }));
+                        }
                     }
+
+                    if (!isClosed) {
+                        controller.enqueue(sse("end", { ok: true }));
+                    }
+
+                    clearInterval(heartbeat);
 
                     if (!isClosed) controller.close();
                 } catch (error: any) {

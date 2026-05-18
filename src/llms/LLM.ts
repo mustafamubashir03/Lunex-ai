@@ -13,7 +13,7 @@ interface GetLLMOptions {
 
 export const getLLM = ({
   provider,
-  temperature = 0,
+  temperature = 0.7,
   maxTokens,
 }: GetLLMOptions) => {
   switch (provider) {

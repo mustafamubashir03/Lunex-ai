@@ -1,10 +1,12 @@
 import { useRef } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getChatHistory, sendMessage } from "@/client-api/chat";
 import { useChatStore } from "@/stores/chatStore";
 
+
 export const useGetChatHistory = (userId: string, threadId: string) => {
   const { setMessages, setIsPending, clearChat } = useChatStore();
+
 
   return useQuery({
     queryKey: ["chat_history", userId, threadId],
@@ -21,6 +23,7 @@ export const useGetChatHistory = (userId: string, threadId: string) => {
 };
 
 export const useSendMessage = () => {
+  const queryClient = useQueryClient();
   const {
     addMessage,
     updateMessageById,
@@ -134,9 +137,15 @@ export const useSendMessage = () => {
                 startTypingLoop(aiMessageId);
               } else if (event === "end") {
                 // Ensure loop continues until queues are empty
+              } else if (event == "updateThread") {
+                if (userId) {
+                  queryClient.invalidateQueries({
+                    queryKey: ["threads_by_userId", userId],
+                  });
+                }
               } else if (event === "error") {
                 updateMessageById(aiMessageId, {
-                  content: "⚠️ Something went wrong while streaming.",
+                  content: "Something went wrong while streaming.",
                 });
                 setIsStreaming(false);
               }

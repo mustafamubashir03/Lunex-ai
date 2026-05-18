@@ -22,6 +22,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -63,6 +73,9 @@ const ChatSidebar = ({
   const [threadToRename, setThreadToRename] = useState<{ id: string, title: string } | null>(null);
   const [newTitle, setNewTitle] = useState("");
 
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [threadToDelete, setThreadToDelete] = useState<string | null>(null);
+
   const onNewChat = async () => {
     await createThreadMutation()
     await queryClient.invalidateQueries({ queryKey: ["threads_by_userId", userId] })
@@ -83,13 +96,20 @@ const ChatSidebar = ({
     }
   }
 
-  const onDeleteChatLocal = async (threadId: string) => {
-    if (window.confirm("Are you sure you want to delete this thread?")) {
-      await deleteThreadMutation({ threadId });
+  const handleDeleteClick = (threadId: string) => {
+    setThreadToDelete(threadId);
+    setIsDeleteOpen(true);
+  }
+
+  const onConfirmDelete = async () => {
+    if (threadToDelete) {
+      await deleteThreadMutation({ threadId: threadToDelete });
       await queryClient.invalidateQueries({ queryKey: ["threads_by_userId", userId] });
-      if (redirectThreadId === threadId) {
+      if (redirectThreadId === threadToDelete) {
         router.push("/chat");
       }
+      setIsDeleteOpen(false);
+      setThreadToDelete(null);
     }
   }
 
@@ -226,7 +246,7 @@ const ChatSidebar = ({
                     className="gap-2 text-destructive"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onDeleteChatLocal(thread.threadId);
+                      handleDeleteClick(thread.threadId);
                     }}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -276,6 +296,28 @@ const ChatSidebar = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the chat thread
+              and all of its messages.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setThreadToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={onConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </aside>
   );
 };

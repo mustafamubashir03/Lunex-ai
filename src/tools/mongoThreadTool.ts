@@ -3,27 +3,29 @@ import { z } from "zod";
 import { Thread } from "@/models/threadSchema";
 import { connectDB } from "@/lib/mongodb/mongodb";
 import mongoose from "mongoose";
+import { cerebrasModel } from "@/llms/LLM";
+import { ChatHistory } from "@/models/chatHistorySchema";
 
 export const createMongoThreadTool = tool(
     async ({ userId, title }: { userId: string, title: string }) => {
         try {
             await connectDB();
-            
+
             if (!mongoose.Types.ObjectId.isValid(userId)) {
                 return "Invalid User ID";
             }
-            
+
             const userObjectId = new mongoose.Types.ObjectId(userId);
-            
+
             // Deactivate all existing active threads for this user
             await Thread.updateMany({ userId: userObjectId, active: true }, { $set: { active: false } });
-            
+
             const newThread = await Thread.create({
                 userId: userObjectId,
                 title: title || "New Thread",
                 active: true,
             });
-            
+
             return JSON.stringify({
                 userId: newThread.userId,
                 title: newThread.title,
@@ -47,22 +49,22 @@ export const createMongoThreadTool = tool(
 export const readMongoThreadTool = tool(async ({ threadId, userId }: { threadId: string, userId: string }) => {
     try {
         await connectDB();
-        
+
         if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(threadId)) {
             return "[]";
         }
-        
+
         const userObjectId = new mongoose.Types.ObjectId(userId);
         const threadObjectId = new mongoose.Types.ObjectId(threadId);
-        
+
         // Deactivate all threads for user
         await Thread.updateMany({ userId: userObjectId }, { $set: { active: false } });
-        
+
         // Activate the specific thread
         await Thread.findOneAndUpdate({ _id: threadObjectId, userId: userObjectId }, { $set: { active: true } });
-        
+
         const threads = await Thread.find({ userId: userObjectId }).sort({ createdAt: 1 });
-        
+
         const formattedThreads = threads.map(t => ({
             userId: t.userId,
             title: t.title,
@@ -70,7 +72,7 @@ export const readMongoThreadTool = tool(async ({ threadId, userId }: { threadId:
             active: t.active,
             createdAt: t.createdAt
         }));
-        
+
         return JSON.stringify(formattedThreads);
 
     } catch (error) {
@@ -89,20 +91,20 @@ export const readMongoThreadTool = tool(async ({ threadId, userId }: { threadId:
 export const updateMongoThreadTool = tool(async ({ threadId, userId, title }: { threadId: string, userId: string, title: string }) => {
     try {
         await connectDB();
-        
+
         if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(threadId)) {
             return "Invalid IDs provided";
         }
-        
+
         const updated = await Thread.findOneAndUpdate(
             { _id: new mongoose.Types.ObjectId(threadId), userId: new mongoose.Types.ObjectId(userId) },
             { $set: { title } }
         );
-        
+
         if (!updated) {
             return "Thread not found.";
         }
-        
+
         return "Thread title updated successfully.";
 
     } catch (error) {
@@ -119,18 +121,70 @@ export const updateMongoThreadTool = tool(async ({ threadId, userId, title }: { 
     })
 });
 
+export const generateMongoThreadTitleTool = tool(async ({ threadId, userId }: { threadId: string, userId: string }) => {
+    try {
+        await connectDB();
+        if (!mongoose.Types.ObjectId.isValid(threadId) || !mongoose.Types.ObjectId.isValid(userId)) {
+            return "Invalid thread ID or user ID provided";
+        }
+        const historyMessages = await ChatHistory.find({ 
+            userId: new mongoose.Types.ObjectId(userId),
+            threadId: new mongoose.Types.ObjectId(threadId)
+        }).sort({ createdAt: 1 }).limit(10);
+
+        const currentThread = await Thread.findById(threadId);
+        
+        // Generate title if it's currently "New Thread" and we have at least one user message
+        if (currentThread?.title === "New Thread" && historyMessages.length >= 2) {
+            const conversationSnippet = historyMessages
+                .map(m => `${m.role.toUpperCase()}: ${m.content}`)
+                .join("\n");
+
+            const response = await cerebrasModel.invoke([
+                {
+                    role: "system",
+                    content: "You are a concise thread title generator. Create a short (3-5 words), engaging title for this conversation. Return ONLY the title text, no quotes or prefix."
+                },
+                {
+                    role: "user",
+                    content: `Conversation:\n${conversationSnippet}`
+                }
+            ]);
+
+            const generatedTitle = String(response.content).trim();
+            
+            if (generatedTitle) {
+                await Thread.findByIdAndUpdate(threadId, { $set: { title: generatedTitle } });
+                return `Title generated: ${generatedTitle}`;
+            }
+        }
+        return "No title generation required.";
+
+    } catch (error) {
+        console.log("Failed to generate thread title", error);
+        return "Failed to generate thread title.";
+    }
+}, {
+    name: "generate_mongo_thread_title",
+    description: "Generates a title for a new thread based on the conversation history",
+    schema: z.object({
+        threadId: z.string(),
+        userId: z.string()
+    })
+})
+
 export const getAllMongoThreadsByUserId = tool(async ({ userId }: { userId: string }) => {
     try {
         await connectDB();
-        
+
         if (!mongoose.Types.ObjectId.isValid(userId)) {
             return "Failed to get all threads by userId";
         }
-        
+
         const userObjectId = new mongoose.Types.ObjectId(userId);
-        
+
         let threads = await Thread.find({ userId: userObjectId }).sort({ createdAt: 1 });
-        
+
         if (threads.length === 0) {
             const newThread = await Thread.create({
                 userId,
@@ -139,15 +193,15 @@ export const getAllMongoThreadsByUserId = tool(async ({ userId }: { userId: stri
             });
             threads = [newThread];
         }
-        
+
         let activeThread = threads.find(t => t.active);
-        
+
         if (!activeThread) {
             activeThread = threads[0];
             activeThread.active = true;
             await Thread.updateOne({ _id: activeThread._id }, { $set: { active: true } });
         }
-        
+
         const formattedThreads = threads.map(t => ({
             userId: t.userId,
             title: t.title,
@@ -175,19 +229,19 @@ export const getAllMongoThreadsByUserId = tool(async ({ userId }: { userId: stri
 export const deleteMongoThreadTool = tool(async ({ threadId, userId }: { threadId: string, userId: string }) => {
     try {
         await connectDB();
-        
+
         if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(threadId)) {
             return "Invalid IDs provided";
         }
-        
-        const deleted = await Thread.findOneAndDelete({ 
-            _id: new mongoose.Types.ObjectId(threadId), 
-            userId: new mongoose.Types.ObjectId(userId) 
+
+        const deleted = await Thread.findOneAndDelete({
+            _id: new mongoose.Types.ObjectId(threadId),
+            userId: new mongoose.Types.ObjectId(userId)
         });
         if (!deleted) {
             return "Thread not found or already deleted.";
         }
-        
+
         return "Thread deleted successfully.";
     } catch (error) {
         console.error("Delete mongo thread error", error);
